@@ -1,0 +1,47 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.github.taiyaki</groupId>
+  <artifactId>stealpingplugin</artifactId>
+  <version>1.0.0</version>
+
+  <!-- ↓ Spigot-repository -->
+  <repositories>
+    <!-- Paper API 用リポジトリ -->
+    <repository>
+      <id>papermc</id>
+      <url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+  </repositories>
+
+  <!-- ↓ Spigot-API -->
+  <dependencies>
+    <dependency>
+      <groupId>io.papermc.paper</groupId>
+      <artifactId>paper-api</artifactId>
+      <!-- ↓ (Minecraftバージョン)-R0.1-SNAPSHOT -->
+      <version>1.20.1-R0.1-SNAPSHOT</version>
+
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <!-- ↓ プロパティ設定 -->
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- ↓ Java version 17 -->
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+  </properties>
+
+  <!-- plugin.yml を pom.xml と連動させる -->
+  <build>
+    <resources>
+      <resource>
+        <targetPath>.</targetPath>
+        <filtering>true</filtering>
+        <directory>src/main/resources/</directory>
+      </resource>
+    </resources>
+  </build>
+
+</project>
