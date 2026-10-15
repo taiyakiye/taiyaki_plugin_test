@@ -1,5 +1,11 @@
 package com.github.taiyaki.stealpingplugin;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.Socket;
+import java.util.function.Consumer;
+
+
 public class NetworkClient {
 	/**
 	 *  汎用的な受信リスナー関数
@@ -18,8 +24,11 @@ public class NetworkClient {
 		// 通信処理をバックグラウンドスレッドで実行
 		new Thread(()-> {
 			try(Socket socket = new Socket(host,port);
-					BufferdReader reader = new BufferedReader(new InputStreamReader(socket.getInput))
-					)
-		})
+					BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+						
+					} catch(Exception e) {
+						onError.accept(e);
+					}
+		}).start(); // start()を呼んでスレッドを開始
 	}
 }
