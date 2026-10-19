@@ -87,7 +87,6 @@ public class OnHttpServer {
 				}
 			});
 			
-			
 			server.start();
 		} catch(Exception e) {
 			e.printStackTrace();

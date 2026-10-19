@@ -36,6 +36,11 @@ public final class StealPingPlugin extends JavaPlugin {
 		otpServer.start(8080);
 		getLogger().info("受信用HTTPサーバーをポート8080で起動したよ");
 		
+		// リスナークラスを渡して登録
+		getServer().getPluginManager().registerEvents(
+				new LoginListener(this.otpServer),
+				this);
+		
         // 2. ProtocolLib のマネージャーを取得
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 
