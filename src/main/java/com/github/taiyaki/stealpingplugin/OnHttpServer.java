@@ -13,9 +13,11 @@ import com.sun.net.httpserver.HttpServer;
 public class OnHttpServer {
 	private HttpServer server;
 	private ExecutorService executor;
+	private final IpWhitelistManager ipManager;
 	
-	// 認証済み IP を保持するスレッドセーフな set??
-	private final Set<String> allowedIps = ConcurrentHashMap.newKeySet();
+	public OnHttpServer(IpWhitelistManager ipManager) {
+		this.ipManager = ipManager;
+	}
 	
 	public void start(int port) {
 		try {
@@ -24,26 +26,32 @@ public class OnHttpServer {
 			executor = Executors.newFixedThreadPool(2);
 			server.setExecutor(executor);
 			
-			// /unlock へのアクセスを待ち受ける
+			/* ======================================
+			 * 
+			 * 1. /unlock (登録)
+			 * DELETEメソッド、またはPOSTで受け付ける
+			 * ======================================
+			 */
 			server.createContext("/unlock", exchange->{
 				try {
-					if("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-						// 通信してきたクライアントのIPアドレスを取得
-						String rawIp = exchange.getRemoteAddress().getAddress().getHostAddress();
-						
-						// IPv4へ正規化
-						String clientIp = NormalizeIp.run(rawIp);
-						
-						// IPを登録
-						allowedIps.add(clientIp);
-						
-						byte[] res = ("IPを登録: "+clientIp).getBytes(StandardCharsets.UTF_8);
-						exchange.sendResponseHeaders(200, res.length);
-						try(OutputStream os = exchange.getResponseBody()){
-							os.write(res);
-						}
-					} else {
+					if(!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
 						exchange.sendResponseHeaders(405,-1);
+						return;
+					}
+					
+					// 通信してきたクライアントのIPアドレスを取得
+					String rawIp = exchange.getRemoteAddress().getAddress().getHostAddress();
+					// IPv4へ正規化
+					String clientIp = NormalizeIp.run(rawIp);
+					
+					// Manager を使って追加
+					ipManager.addIp(clientIp);
+					
+					String msg = "IP を登録しました: "+ clientIp;
+					byte[] res = msg.getBytes(StandardCharsets.UTF_8);
+					exchange.sendResponseHeaders(200,res.length);
+					try(OutputStream os = exchange.getResponseBody()){
+						os.write(res);
 					}
 				} finally {
 					exchange.close();
@@ -59,28 +67,22 @@ public class OnHttpServer {
 			server.createContext("/lock",exchange->{
 				try {
 					String method = exchange.getRequestMethod();
-					// DELETEでもPOSTでも受け付けられるようにする
-					if("DELETE".equalsIgnoreCase(method) || "POST".equalsIgnoreCase(method)) {
-						String rawIp = exchange.getRemoteAddress().getAddress().getHostAddress();
-						String clientIp = NormalizeIp.run(rawIp);
-						
-						// リストから削除
-						boolean removed = allowedIps.remove(clientIp);
-						
-						String msg;
-						if(removed) {
-							msg = "IPは正常に消えたよ: " + clientIp;
-						} else {
-							msg = "whiteListにIPはなかったよ: " + clientIp;
-						}
-						
-						byte[] res = msg.getBytes(StandardCharsets.UTF_8);
-						exchange.sendResponseHeaders(200, res.length);
-						try(OutputStream os = exchange.getResponseBody()){
-							os.write(res);
-						}
-					} else {
-						exchange.sendResponseHeaders(405, -1);
+					if(!"DELETE".equalsIgnoreCase(method) && !"POST".equalsIgnoreCase(method)) {
+						exchange.sendResponseHeaders(405,-1);
+						return;
+					}
+					
+					String rawIp = exchange.getRemoteAddress().getAddress().getHostAddress();
+					String clientIp = NormalizeIp.run(rawIp);
+					
+					// Managerを使って削除
+					boolean removed = ipManager.removeIp(clientIp);
+					
+					String msg = removed ? "IP を削除しました: " + clientIp : "IP が見つかりませんでした: " + clientIp;
+					byte[] res = msg.getBytes(StandardCharsets.UTF_8);
+					exchange.sendResponseHeaders(200,res.length);
+					try(OutputStream os = exchange.getResponseBody()){
+						os.write(res);
 					}
 				} finally {
 					exchange.close();
@@ -91,11 +93,6 @@ public class OnHttpServer {
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
-	}
-	
-	// IPが登録されているかチェック
-	public boolean isAllowed(String ip) {
-		return allowedIps.contains(ip);
 	}
 	
 	public void stop() {

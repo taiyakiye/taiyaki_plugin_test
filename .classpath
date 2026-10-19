@@ -36,6 +36,6 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/paper/plugins/ProtocolLib -Plugin-1.21.1.jar"/>
+	<classpathentry kind="lib" path="C:/paperMC/plugins/ProtocolLib -Plugin-1.21.1.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

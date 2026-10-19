@@ -18,6 +18,7 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedServerPing;
 import com.comphenix.protocol.wrappers.WrappedServerPing.CompressedImage;
+import java.util.logging.Logger;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -25,21 +26,27 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 
 public final class StealPingPlugin extends JavaPlugin {
 	// サーバー直下の icons/locked/alert.png を指定
-	File iconFile = new File("icons/icon.png");
-	File unknown_iconFile = new File("icons/unknown_server.png");
+	//File iconFile = new File("icons/icon.png");
+	//File unknown_iconFile = new File("icons/unknown_server.png");
 	
-	private final OnHttpServer otpServer = new OnHttpServer();
+	private IpWhitelistManager ipManager;
+	private OnHttpServer otpServer;
 	
 	@Override
     public void onEnable() {
-		// 1. プラグイン自身で8080番ポートの受信用サーバーを起動
-		otpServer.start(8080);
-		getLogger().info("受信用HTTPサーバーをポート8080で起動したよ");
+		// 1.IP管理クラスを初期化(ファイルから自動ロード)
+		this.ipManager = new IpWhitelistManager(getDataFolder(), getLogger());
+	
+		// 2. プラグイン自身で8080番ポートの受信用サーバーを起動
+		this.otpServer = new OnHttpServer(this.ipManager);
+		this.otpServer.start(8080);
 		
 		// リスナークラスを渡して登録
 		getServer().getPluginManager().registerEvents(
-				new LoginListener(this.otpServer),
-				this);
+				new LoginListener(this.ipManager),
+				this
+				);
+		getLogger().info("StealPingPlugin が正常に有効化されました。");
 		
         // 2. ProtocolLib のマネージャーを取得
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
@@ -68,8 +75,9 @@ public final class StealPingPlugin extends JavaPlugin {
                 //getLogger().info("playerのIP: "+playerIp);
                 
                 // 登録済みIPか判定
-                if(otpServer.isAllowed(playerIp)) {
+                if(ipManager.isAllowed(playerIp)) {
                 	//画像の表示
+                	/*
 					try {
 						image = CompressedImage.fromPng(ImageIO.read(iconFile));
 						ping.setFavicon(image);
@@ -77,6 +85,7 @@ public final class StealPingPlugin extends JavaPlugin {
 						// TODO 自動生成された catch ブロック
 						e.printStackTrace();
 					}
+					*/
                 	
                 	motd = mm.deserialize("認証済み：接続可能だよ");
                 } else {
@@ -93,6 +102,7 @@ public final class StealPingPlugin extends JavaPlugin {
                     ping.setPlayers(java.util.Collections.emptyList());
                     
                     // 画像の表示
+                    /*
                     try {
 						image = CompressedImage.fromPng(ImageIO.read(unknown_iconFile));
 						ping.setFavicon(image);
@@ -100,6 +110,7 @@ public final class StealPingPlugin extends JavaPlugin {
 						// TODO 自動生成された catch ブロック
 						e.printStackTrace();
 					}
+					*/
                 }
                 
                 String jsonMotd = GsonComponentSerializer.gson().serialize(motd);
@@ -115,5 +126,9 @@ public final class StealPingPlugin extends JavaPlugin {
     public void onDisable() {
     	otpServer.stop();
         getLogger().info("StealPingPlugin を停止しました。");
+    }
+    
+    public IpWhitelistManager getIpManager() {
+    	return ipManager;
     }
 }
