@@ -3,4 +3,12 @@ version: 1.0.0
 main: com.github.taiyaki.stealpingplugin.StealPingPlugin
 api-version: '1.20'
 depend:
-- ProtocolLib
+  - ProtocolLib
+  - voicechat
+
+commands:
+  stealping:
+    description: StealPingPluginの管理・リロード用コマンド
+    permission: stealping.admin
+    permission-message: §c権限がありません。
+    usage: /stealping reload
