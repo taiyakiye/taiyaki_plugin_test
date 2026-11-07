@@ -1,4 +1,4 @@
-package com.github.taiyaki.stealpingplugin;
+package com.github.taiyaki.stealpingplugin.old;
 
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;

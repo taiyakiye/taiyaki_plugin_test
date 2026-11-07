@@ -1,4 +1,4 @@
-package com.github.taiyaki.stealpingplugin;
+package com.github.taiyaki.stealpingplugin.old;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 

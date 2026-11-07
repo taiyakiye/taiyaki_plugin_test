@@ -21,6 +21,8 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedServerPing;
 import com.comphenix.protocol.wrappers.WrappedServerPing.CompressedImage;
+import com.github.taiyaki.stealpingplugin.old.ChatSoundListener;
+import com.github.taiyaki.stealpingplugin.old.VoicechatController;
 
 import de.maxhenkel.voicechat.api.BukkitVoicechatService;
 import net.kyori.adventure.text.Component;
@@ -39,7 +41,7 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 	private WrappedChatComponent cachedDeniedMotd;
 	
 	private IpWhitelistManager ipManager;
-	private ChatSoundListener chatSoundListener;
+	//private ChatSoundListener chatSoundListener;
 	private OnHttpServer otpServer;
 	
 	@Override
@@ -52,7 +54,7 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 		// 1. IP管理、HTTPさーバー初期化
 		// -プラグイン自身で8080番ポートの受信用サーバーを起動
 		this.ipManager = new IpWhitelistManager(getDataFolder(), getLogger());
-		this.chatSoundListener = new ChatSoundListener(this);
+		//this.chatSoundListener = new ChatSoundListener(this);
 		
 		this.otpServer = new OnHttpServer(this.ipManager);
 		this.otpServer.start(8080);
@@ -67,7 +69,8 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 				this
 				);
 		
-		// 2. Simple Voice Chat APIのサービス登録
+		/**
+		 * // 2. Simple Voice Chat APIのサービス登録
 		BukkitVoicechatService service = getServer().getServicesManager().load(BukkitVoicechatService.class);
 		if(service != null) {
 			// VoicechatController インスタンスをSVCへ登録
@@ -76,6 +79,7 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 		} else {
 			getLogger().warning("Simple Voice Chat プラグインが見つからないか、有効化されていません。");
 		}
+		 */
 		
 		// 3. 画像およびMOTDの事前キャッシュ(ping時のディスクアクセス、変換処理を排除)
 		loadCache();
@@ -148,9 +152,9 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 				this.ipManager.loadFromFile();
 			}
 			
-			if(this.chatSoundListener != null) {
-				this.chatSoundListener.loadSpeakerId();
-			}
+			//if(this.chatSoundListener != null) {
+			//	this.chatSoundListener.loadSpeakerId();
+			//}
 			
 			// 3. アイコン等のキャッシュがある場合はそれらも再読み込み
 			// loadFaviconCache();

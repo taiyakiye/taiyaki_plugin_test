@@ -1,4 +1,4 @@
-package com.github.taiyaki.stealpingplugin;
+package com.github.taiyaki.stealpingplugin.old;
 
 import java.net.URI;
 import java.net.URLEncoder;
