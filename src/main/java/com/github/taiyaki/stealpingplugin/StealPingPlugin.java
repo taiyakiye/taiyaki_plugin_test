@@ -68,6 +68,10 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 				new ChatSoundListener(this), 
 				this
 				);
+		getServer().getPluginManager().registerEvents(
+				new BinderHoldListener(this), 
+				this
+				);
 		
 		/**
 		 * // 2. Simple Voice Chat APIのサービス登録
