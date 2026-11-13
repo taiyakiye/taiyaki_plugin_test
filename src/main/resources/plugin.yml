@@ -7,8 +7,10 @@ depend:
   - voicechat
 
 commands:
-  stealping:
-    description: StealPingPluginの管理・リロード用コマンド
-    permission: stealping.admin
-    permission-message: §c権限がありません。
-    usage: /stealping reload
+ stealping:
+  description: StealPingPluginの管理・リロード用コマンド
+  permission: stealping.admin
+  permission-message: §c権限がありません。
+  usage: /stealping reload
+ b:
+  description: バインダーを呼び出します

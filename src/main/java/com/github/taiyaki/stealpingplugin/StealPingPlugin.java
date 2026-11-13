@@ -22,9 +22,7 @@ import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedServerPing;
 import com.comphenix.protocol.wrappers.WrappedServerPing.CompressedImage;
 import com.github.taiyaki.stealpingplugin.old.ChatSoundListener;
-import com.github.taiyaki.stealpingplugin.old.VoicechatController;
 
-import de.maxhenkel.voicechat.api.BukkitVoicechatService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
@@ -50,6 +48,10 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 		if(getCommand("stealping") != null) {
 			getCommand("stealping").setExecutor(this);
 		}
+		if(getCommand("b") != null) {
+			getCommand("b").setExecutor(new BinderCommand(this));
+		}
+		
 		
 		// 1. IP管理、HTTPさーバー初期化
 		// -プラグイン自身で8080番ポートの受信用サーバーを起動
@@ -66,10 +68,6 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 			);
 		getServer().getPluginManager().registerEvents(
 				new ChatSoundListener(this), 
-				this
-				);
-		getServer().getPluginManager().registerEvents(
-				new BinderHoldListener(this), 
 				this
 				);
 		
