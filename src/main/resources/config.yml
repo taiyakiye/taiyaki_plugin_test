@@ -1,0 +1,7 @@
+# バインダー表示位置の微調整用設定（Blockbenchのピクセル単位）
+binder:
+  translation:
+    x: 0.0
+    y: -4.0
+    z: -14.0
+  scale: 1.0

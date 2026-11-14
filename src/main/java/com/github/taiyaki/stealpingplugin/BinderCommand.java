@@ -17,8 +17,24 @@ import org.joml.Vector3f;
 public class BinderCommand implements CommandExecutor {
 	private final StealPingPlugin plugin;
 	
+	//  メモリ上に保持しておく変数
+	private float transX;
+	private float transY;
+	private float transZ;
+	private float scale;
+	
 	public BinderCommand(StealPingPlugin plugin) {
 		this.plugin = plugin;
+		// 起動時に1回だけ読み込む
+		loadConfig();
+	}
+	
+	// config.yml から値を読み込んで変数にセットするメソッド
+	public void loadConfig() {
+		this.transX = (float)plugin.getConfig().getDouble("binder.translation.x", 0.0) / 16.0f;
+		this.transY = (float)plugin.getConfig().getDouble("binder.translation.y", 0.0) / 16.0f;
+		this.transZ = (float)plugin.getConfig().getDouble("binder.translation.z", 0.0) / 16.0f;
+		this.scale  = (float) plugin.getConfig().getDouble("binder.scale", 1.0);
 	}
 	
 	@Override
@@ -29,9 +45,8 @@ public class BinderCommand implements CommandExecutor {
 		
 		// プレイヤーの目のまえ(1.0先)に召喚位置を計算
 		Location spawnLoc = player.getEyeLocation().add(player.getLocation().getDirection());
-		// プレイヤーの方を向かせる
-		spawnLoc.setYaw(player.getLocation().getYaw() + 180f);
-		spawnLoc.setPitch(0f);
+		// プレイヤーの方+30度?向かせる
+		spawnLoc.setPitch(player.getLocation().getPitch()+30.0f);
 		
 		// ItemDisplay を召喚(初期状態:閉じた本(1001番))
 		ItemDisplay display = player.getWorld().spawn(spawnLoc, ItemDisplay.class, entity -> {
@@ -39,9 +54,15 @@ public class BinderCommand implements CommandExecutor {
 			entity.setBillboard(Billboard.FIXED);
 			
 			Transformation initial = entity.getTransformation();
-			initial.getScale().set(new Vector3f(1.2f, 1.2f, 1.2f));
+			// translationの設定
+			initial.getTranslation().add(transX, transY, transZ);
+			// サイズ設定
+			//initial.getScale().set(new Vector3f(scale, scale, scale));
+			
 			entity.setTransformation(initial);
 		});
+		
+		player.sendMessage("§a召喚完了: X=" + transX + ", Y=" + transY + ", Z=" + transZ + ", Scale=" + scale);
 		
 		// アニメーションの設定
 		int startModel = 1001;

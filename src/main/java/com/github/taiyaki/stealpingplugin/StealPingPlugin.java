@@ -38,6 +38,7 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 	private WrappedChatComponent cachedAllowedMotd;
 	private WrappedChatComponent cachedDeniedMotd;
 	
+	private BinderCommand binderCommand;
 	private IpWhitelistManager ipManager;
 	//private ChatSoundListener chatSoundListener;
 	private OnHttpServer otpServer;
@@ -49,9 +50,11 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 			getCommand("stealping").setExecutor(this);
 		}
 		if(getCommand("b") != null) {
-			getCommand("b").setExecutor(new BinderCommand(this));
+			getCommand("b").setExecutor(this.binderCommand);
 		}
 		
+		// config.yml がなければ resources からコピーして自動生成
+		saveDefaultConfig();
 		
 		// 1. IP管理、HTTPさーバー初期化
 		// -プラグイン自身で8080番ポートの受信用サーバーを起動
@@ -152,6 +155,9 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 			// 2. 独自管理しているファイル(allowed_ips.txtなど)の再読み込み
 			if(this.ipManager != null) {
 				this.ipManager.loadFromFile();
+			}
+			if(this.binderCommand != null) {
+				this.binderCommand.loadConfig();
 			}
 			
 			//if(this.chatSoundListener != null) {
