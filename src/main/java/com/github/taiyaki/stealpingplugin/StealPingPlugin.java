@@ -45,6 +45,16 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 	
 	@Override
     public void onEnable() {
+		// 1. IP管理、HTTPさーバー初期化
+		// -プラグイン自身で8080番ポートの受信用サーバーを起動
+		this.ipManager = new IpWhitelistManager(getDataFolder(), getLogger());
+		//this.chatSoundListener = new ChatSoundListener(this);
+				
+		this.otpServer = new OnHttpServer(this.ipManager);
+		this.otpServer.start(8080);
+		// BinderCommandの登録
+		this.binderCommand = new BinderCommand(this);
+		
 		// コマンド処理を担当するクラスとして自身(this)を登録
 		if(getCommand("stealping") != null) {
 			getCommand("stealping").setExecutor(this);
@@ -53,17 +63,6 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 			getCommand("b").setExecutor(this.binderCommand);
 		}
 		
-		// config.yml がなければ resources からコピーして自動生成
-		saveDefaultConfig();
-		
-		// 1. IP管理、HTTPさーバー初期化
-		// -プラグイン自身で8080番ポートの受信用サーバーを起動
-		this.ipManager = new IpWhitelistManager(getDataFolder(), getLogger());
-		//this.chatSoundListener = new ChatSoundListener(this);
-		
-		this.otpServer = new OnHttpServer(this.ipManager);
-		this.otpServer.start(8080);
-	
 		// 2. イベントリスナー登録
 		getServer().getPluginManager().registerEvents(
 				new LoginListener(this.ipManager),
@@ -73,6 +72,9 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 				new ChatSoundListener(this), 
 				this
 				);
+		
+		// config.yml がなければ resources からコピーして自動生成
+		saveDefaultConfig();
 		
 		/**
 		 * // 2. Simple Voice Chat APIのサービス登録
