@@ -11,6 +11,6 @@ commands:
   description: StealPingPluginの管理・リロード用コマンド
   permission: stealping.admin
   permission-message: §c権限がありません。
-  usage: /stealping reload
+  usage: /spp reload
  b:
   description: バインダーを呼び出します

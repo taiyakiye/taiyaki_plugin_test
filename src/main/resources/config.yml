@@ -2,6 +2,7 @@
 binder:
   translation:
     x: 0.0
-    y: -4.0
-    z: -14.0
+    y: 0.0
+    z: 0.0
   scale: 1.0
+  delay: 0L

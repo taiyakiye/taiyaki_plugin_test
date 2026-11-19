@@ -5,6 +5,7 @@ import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -24,6 +25,7 @@ public class BinderCommand implements CommandExecutor {
 	private float transY;
 	private float transZ;
 	private float scale;
+	private long delay;
 	
 	public BinderCommand(StealPingPlugin plugin) {
 		this.plugin = plugin;
@@ -37,15 +39,17 @@ public class BinderCommand implements CommandExecutor {
 		double rawY = (float)plugin.getConfig().getDouble("binder.translation.y", 0.0);
 		double rawZ = (float)plugin.getConfig().getDouble("binder.translation.z", 0.0);
 		double rawScale  = (float)plugin.getConfig().getDouble("binder.scale", 1.0);
+		delay = (long)plugin.getConfig().getLong("binder.delay", 0L);
 		
 		this.transX = (float)rawX / 16.0f;
 		this.transY = (float)rawY / 16.0f;
 		this.transZ = (float)rawZ / 16.0f;
 		this.scale = (float) rawScale;
 		
+		
 		plugin.getLogger().info(String.format(
-				"[Debug:BinderConfig] raw=(%.2f, %.2f, %.2f) -> scaled=(%.3f, %.3f, %.3f), scale=%.2f",
-				rawX, rawY, rawZ, transX, transY, transZ, scale
+				"[Debug:BinderConfig] raw=(%.2f, %.2f, %.2f) -> scaled=(%.3f, %.3f, %.3f), scale=%.2f, delay=%d",
+				rawX, rawY, rawZ, transX, transY, transZ, scale, delay
 				));
 	}
 	
@@ -62,7 +66,7 @@ public class BinderCommand implements CommandExecutor {
 			// プレイヤーの方+30度?向かせる
 			spawnLoc.setPitch(player.getLocation().getPitch()+30.0f);
 			
-			// ItemDisplay を召喚(初期状態:閉じた本(1001番))
+			// ItemDisplay を召喚(初期状態:閉じた本(1000番))
 			ItemDisplay display = player.getWorld().spawn(spawnLoc, ItemDisplay.class, entity -> {
 				entity.setItemStack(createBinderItem(1000));
 				entity.setBillboard(Billboard.FIXED);
@@ -76,37 +80,41 @@ public class BinderCommand implements CommandExecutor {
 				entity.setTransformation(initial);
 			});
 			
+			// 効果音とパーティクルを出す
+			// 座標の設定
+			Location effectLoc = player.getEyeLocation().add(player.getLocation().getDirection().multiply(0.9));
+			
+			// パーティクルの発生
+			effectLoc.getWorld().spawnParticle(
+					Particle.CLOUD,
+					effectLoc,
+					20,
+					0.2, 0.2, 0.2,
+					0.05
+					);
+			
 			// デバッグ情報をチャットとコンソールに出力
 			String debugMsg = String.format(
-					"§e[Debug] UUID=%s | 基準座標=(%.1f, %.1f, %.1f) | ズレ=(%.2f, %.2f, %.2f) | Scale=%.2f",
+					"§e[Debug] UUID=%s | 基準座標=(%.1f, %.1f, %.1f) | ズレ=(%.2f, %.2f, %.2f) | Scale=%.2f | Delay=%d",
 					display.getUniqueId().toString().substring(0, 8),
 					spawnLoc.getX(), spawnLoc.getY(), spawnLoc.getZ(),
-					transX, transY, transZ, scale
+					transX, transY, transZ, scale, delay
 					);
 			player.sendMessage(debugMsg);
 			plugin.getLogger().info(debugMsg);
 			
-			// アニメーションの設定
-			int startModel = 1001;
-			int endModel = 1004; // 例えば 1001〜1004 の4段階（3回変化）の場合
-			int steps = endModel - startModel; // 変化する回数 (3回)
-	
-			// 20 ticks (1秒) を変化回数で割って、1コマあたりのTick数を自動算出 (20 / 4 = 5 ticks)
-			long interval = Math.max(1L, 10L / steps);
-	
-			for (int i = 1; i <= steps; i++) {
-				final int targetModel = startModel + i;
-				long delay = i * interval; // 5L, 10L, 15L, 20L
-	
-				Bukkit.getScheduler().runTaskLater(plugin, () -> {
-				    if (display.isValid()) {
-				    	display.setItemStack(createBinderItem(targetModel));
-				    	player.sendMessage("§7[Debug] モデル変更 -> " + targetModel);
-				    } else {
-				    	player.sendMessage("§c[Debug] エンティティが既に消滅しています！");
-				    }
-				}, delay);
-			}
+			// モデルの変更(開いた本(1001番))
+			int targetModel = 1001;
+			
+			Bukkit.getScheduler().runTaskLater(plugin, () -> {
+			    if (display.isValid()) {
+			    	display.setItemStack(createBinderItem(targetModel));
+			    	player.sendMessage("§7[Debug] モデル変更 -> " + targetModel);
+			    } else {
+			    	player.sendMessage("§c[Debug] エンティティが既に消滅しています！");
+			    }
+			}, delay);
+			
 		} catch(Exception e) {
 			player.sendMessage("§c[Debug] 例外発生: %s - %s", e.getClass().getSimpleName(), e.getMessage());
 			plugin.getLogger().log(Level.SEVERE, "[Debug BinderCommand 実行中にエラー:", e);

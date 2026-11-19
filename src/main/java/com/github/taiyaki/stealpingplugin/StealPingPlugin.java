@@ -56,8 +56,8 @@ public final class StealPingPlugin extends JavaPlugin implements CommandExecutor
 		this.binderCommand = new BinderCommand(this);
 		
 		// コマンド処理を担当するクラスとして自身(this)を登録
-		if(getCommand("stealping") != null) {
-			getCommand("stealping").setExecutor(this);
+		if(getCommand("spp") != null) {
+			getCommand("spp").setExecutor(this);
 		}
 		if(getCommand("b") != null) {
 			getCommand("b").setExecutor(this.binderCommand);
