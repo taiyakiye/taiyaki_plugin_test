@@ -9,6 +9,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -26,9 +29,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Transformation;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
 public class BinderCommand implements CommandExecutor {
+	private final Map<UUID, ItemDisplay> activeBinders = new HashMap<>();
+	
 	private final StealPingPlugin plugin;
 	// 改行インデント付きで見やすく出力するGsonインスタンス
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -36,13 +43,16 @@ public class BinderCommand implements CommandExecutor {
 	// 読み込んだデータを保持しておく変数
 	private Binder data;
 	//  メモリ上に保持しておく変数
-	private float transX;
-	private float transY;
-	private float transZ;
 	private float scale;
 	private long delay;
-	private String sound;
-	private String particle;
+	
+	private Binder.playSound soundConfig;
+	private Binder.spawnParticle particleConfig;
+	private Binder.Translation translation;
+	
+	// Transformationの保持をする変数
+	private Transformation cachedInitialTransform;
+	private ItemStack[] cachedModels;
 	
 	public BinderCommand(StealPingPlugin plugin) {
 		this.plugin = plugin;
@@ -58,7 +68,6 @@ public class BinderCommand implements CommandExecutor {
 			// ファイルがなければ初期化(new Binder()) で自動作成する
 			if(!jsonFile.exists()) {
 				this.data = Binder.createDefault(jsonFile);
-				return;
 			}
 			
 			// Jsonファイルを読み込んでBinderクラスに変換する
@@ -66,26 +75,39 @@ public class BinderCommand implements CommandExecutor {
 				this.data = gson.fromJson(reader, Binder.class);
 				if(this.data == null) this.data = new Binder();
 				
-
-				
-
-				// playSOund　の集まりを1津の変数にくくって取り出す
-				Binder.playSound soundConfig = data.playsound;
-				Binder.spawnParticle particleConfig = data.spawnParticle;
-				Binder.Translation translationConfig = data.translation;
+				// playSOund　の集まりを1つの変数にくくって取り出す
+				this.soundConfig = data.playsound;
+				this.particleConfig = data.spawnParticle;
+				this.translation = data.translation;
 				
 				this.scale = (float)data.scale;
 				this.delay = (long)data.delay;
-				this.transX = (float)rawX / 16.0f;
-				this.transY = (float)rawY / 16.0f;
-				this.transZ = (float)rawZ / 16.0f;
-				
 
 				plugin.getLogger().info(String.format(
 						"[Debug:BinderConfig] raw=(%.2f, %.2f, %.2f) -> scaled=(%.3f, %.3f, %.3f), scale=%.2f, delay=%d",
-						rawX, rawY, rawZ, transX, transY, transZ, scale, delay
+						translation.x, translation.y, translation.z, translation.x/16f, translation.y/16f, translation.z/16f, scale, delay
 						));
+				
+				// translationを16で割っておく
+				this.translation.x /= 16f;
+				this.translation.y /= 16f;
+				this.translation.z /= 16f;
 			}
+			
+			// Transformationの初期化
+			this.cachedInitialTransform = new Transformation(
+					new Vector3f((float)translation.x,(float)translation.y,(float)translation.z),
+					new AxisAngle4f(),						// leftRotation(回転なし)
+					new Vector3f(scale, scale, scale),		// scale
+					new AxisAngle4f()						// rightRotation(回転なし)
+					);
+			
+			// ItemStack(1000,1001)もあらかじめ生成してキャッシュしておく。
+			this.cachedModels = new ItemStack[2];
+			for(int i=0; i<2; i++) {
+				this.cachedModels[i] = createBinderItem(1000+i);
+			}
+
 		} catch(IOException e) {
 			plugin.getLogger().severe("binder.json の読み込みに失敗しました: "+e.getMessage());
 			this.data = new Binder();
@@ -99,25 +121,29 @@ public class BinderCommand implements CommandExecutor {
             return true;
         }
 		
+		UUID uuid = player.getUniqueId();
+		
+		 // すでにバインダーを召喚中なら消去して終了(トグル動作？)
+		ItemDisplay existing = activeBinders.get(uuid);
+		if(existing != null && existing.isValid()) {
+			existing.remove();
+			activeBinders.remove(uuid);
+			return true;
+		}
+		
 		try {
-			// プレイヤーの目のまえ(1.0先)に召喚位置を計算
-			Location spawnLoc = player.getEyeLocation().add(player.getLocation().getDirection());
-			// プレイヤーの方+30度?向かせる
-			spawnLoc.setPitch(player.getLocation().getPitch()+30.0f);
+			// 設定の使いまわし
+			Location spawnLoc = getBinderTargetLocation(player);
 			
 			// ItemDisplay を召喚(初期状態:閉じた本(1000番))
 			ItemDisplay display = player.getWorld().spawn(spawnLoc, ItemDisplay.class, entity -> {
-				entity.setItemStack(createBinderItem(1000));
+				entity.setItemStack(cachedModels[0]);
 				entity.setBillboard(Billboard.FIXED);
-				
-				Transformation initial = entity.getTransformation();
-				// translationの設定
-				initial.getTranslation().add(transX, transY, transZ);
-				// サイズ設定
-				initial.getScale().set(new Vector3f(scale, scale, scale));
-				
-				entity.setTransformation(initial);
+				entity.setTransformation(cachedInitialTransform);
 			});
+			
+			// 召喚したエンティティをMapに登録
+			activeBinders.put(uuid, display);
 			
 			// 効果音とパーティクルを出す
 			// 座標の設定
@@ -126,18 +152,20 @@ public class BinderCommand implements CommandExecutor {
 			// playsound
 			player.getWorld().playSound(
 				   effectLoc,                    // 音を鳴らす座標 (Location)
-				   Sound.ENTITY_GENERIC_EXPLODE, // 音の種類 (Sound enum)
-				   1.0f,                         // 音量 (1.0f = 標準)
-				   0.75f                         // ピッチ (0.5f〜2.0f / 低いほど重低音)
+				   soundConfig.sound, 			 // 音の種類 (Sound enum)
+				   soundConfig.volume,           // 音量 (1.0f = 標準)
+				   soundConfig.pitch             // ピッチ (0.5f〜2.0f / 低いほど重低音)
 			);
 			
 			// パーティクルの発生
 			player.getWorld().spawnParticle(
-				    Particle.CLOUD, // パーティクルの種類 (Particle enum)
-				    effectLoc,      // 発生させる座標 (Location)
-				    20,             // 粒の数
-				    0.2, 0.2, 0.2,  // X, Y, Z の散らばり範囲（ブロック単位）
-				    0.05            // 粒が飛び散るスピード
+					Particle.valueOf(particleConfig.particle), 		// パーティクルの種類 (Particle enum)
+				    effectLoc,      								// 発生させる座標 (Location)
+				    particleConfig.count,           				// 粒の数
+				    particleConfig.delta.x,							// X, Y, Z の散らばり範囲（ブロック単位）
+				    particleConfig.delta.y,
+				    particleConfig.delta.z,
+				    particleConfig.speed            				// 粒が飛び散るスピード
 				);
 			
 			// デバッグ情報をチャットとコンソールに出力
@@ -145,22 +173,36 @@ public class BinderCommand implements CommandExecutor {
 					"§e[Debug] UUID=%s | 基準座標=(%.1f, %.1f, %.1f) | ズレ=(%.2f, %.2f, %.2f) | Scale=%.2f | Delay=%d",
 					display.getUniqueId().toString().substring(0, 8),
 					spawnLoc.getX(), spawnLoc.getY(), spawnLoc.getZ(),
-					transX, transY, transZ, scale, delay
+					translation.x, translation.y, translation.z, scale, delay
 					);
 			player.sendMessage(debugMsg);
 			plugin.getLogger().info(debugMsg);
 			
-			// モデルの変更(開いた本(1001番))
-			int targetModel = 1001;
-			
 			Bukkit.getScheduler().runTaskLater(plugin, () -> {
 			    if (display.isValid()) {
-			    	display.setItemStack(createBinderItem(targetModel));
-			    	player.sendMessage("§7[Debug] モデル変更 -> " + targetModel);
+			    	display.setItemStack(cachedModels[1]);
+			    	player.sendMessage("§7[Debug] モデル変更 -> " + 1001);
 			    } else {
 			    	player.sendMessage("§c[Debug] エンティティが既に消滅しています！");
 			    }
 			}, delay);
+			
+			 // 召喚後ずっとプレイヤーを追跡する
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					// バインダーが消えた、またはプレイヤーがログアウトしたら追跡を終了
+					if(!display.isValid() || !player.isOnline()) {
+						if(display.isValid()) {
+							display.remove();
+						}
+						
+						this.cancel();
+						return;
+					}
+					display.teleport(getBinderTargetLocation(player));
+				}
+			}.runTaskTimer(plugin, 1L, 2L); // コマンド終了後も2tickごとにずっと動き続ける
 			
 		} catch(Exception e) {
 			player.sendMessage("§c[Debug] 例外発生: %s - %s", e.getClass().getSimpleName(), e.getMessage());
@@ -179,5 +221,11 @@ public class BinderCommand implements CommandExecutor {
 			item.setItemMeta(meta);
 		}
 		return item;
+	}
+	
+	private Location getBinderTargetLocation(Player player) {
+		Location loc = player.getEyeLocation();
+		loc.setPitch(player.getLocation().getPitch() + 30f);
+		return loc;
 	}
 }

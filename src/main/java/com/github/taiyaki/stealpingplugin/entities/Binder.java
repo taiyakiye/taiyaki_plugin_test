@@ -21,14 +21,14 @@ public class Binder{
 	
 	public static class playSound{
 		public String sound = "";
-		public double volume = 1.0f;
-		public double pitch = 1.0f;
+		public float volume = 1.0f;
+		public float pitch = 1.0f;
 		
 	}
 	
 	public static class spawnParticle{
 		public String particle = "";
-		public double count = 0.0f;
+		public int count = 0;
 		public Offset delta = new Offset();
 		public double speed = 0.0f;
 	}
